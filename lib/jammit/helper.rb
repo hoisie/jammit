@@ -25,10 +25,16 @@ module Jammit
     # Writes out the URL to the bundled and compressed javascript package,
     # except in development, where it references the individual scripts.
     def include_javascripts(*packages)
+      options = packages.extract_options!
       tags = packages.map do |pack|
         should_package? ? Jammit.asset_url(pack, :js) : Jammit.packager.individual_urls(pack.to_sym, :js)
       end
-      html_safe(javascript_include_tag(tags.flatten))
+      headjs = options.delete(:headjs) == true
+      if headjs
+        html_safe(javascript_include_tag('head.load.min')) + headjs_include_tag(tags.flatten)
+      else
+        html_safe(javascript_include_tag(tags.flatten))
+      end
     end
 
     # Writes out the URL to the concatenated and compiled JST file -- we always
@@ -36,7 +42,6 @@ module Jammit
     def include_templates(*packages)
       raise DeprecationError, "Jammit 0.5+ no longer supports separate packages for templates.\nYou can include your JST alongside your JS, and use include_javascripts."
     end
-
 
     private
 
@@ -77,6 +82,20 @@ module Jammit
       stylesheet_link_tag(*packages)
     end
 
+    def headjs_include_tag(*sources)
+      keys = []
+      content_tag :script, :type => Mime::JS do
+        "head.js( #{javascript_include_tag(*sources).scan(/src="([^"]+)"/).flatten.map { |src|
+          key = URI.parse(src).path[%r{[^/]+\z}].gsub(/\.js$/,'').gsub(/\.min$/,'')
+          while keys.include?(key) do
+            key += '_' + key
+          end
+          keys << key
+          "{ '#{key}': '#{src}' }"
+        }.join(', ')} );"
+      end
+    end
+    
   end
 
 end
