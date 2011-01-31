@@ -43,6 +43,20 @@ module Jammit
       raise DeprecationError, "Jammit 0.5+ no longer supports separate packages for templates.\nYou can include your JST alongside your JS, and use include_javascripts."
     end
 
+    def headjs_include_tag(*sources)
+      keys = []
+      content_tag :script, :type => Mime::JS do
+        "head.js( #{javascript_include_tag(*sources).scan(/src="([^"]+)"/).flatten.map { |src|
+          key = URI.parse(src).path[%r{[^/]+\z}].gsub(/\.js$/,'').gsub(/\.min$/,'')
+          while keys.include?(key) do
+            key += '_' + key
+          end
+          keys << key
+          "{ '#{key}': '#{src}' }"
+        }.join(', ')} );"
+      end
+    end
+    
     private
 
     def should_package?
@@ -80,20 +94,6 @@ module Jammit
       packages.map! {|package| yield package }.flatten!
       packages.push(options) unless options.empty?
       stylesheet_link_tag(*packages)
-    end
-
-    def headjs_include_tag(*sources)
-      keys = []
-      content_tag :script, :type => Mime::JS do
-        "head.js( #{javascript_include_tag(*sources).scan(/src="([^"]+)"/).flatten.map { |src|
-          key = URI.parse(src).path[%r{[^/]+\z}].gsub(/\.js$/,'').gsub(/\.min$/,'')
-          while keys.include?(key) do
-            key += '_' + key
-          end
-          keys << key
-          "{ '#{key}': '#{src}' }"
-        }.join(', ')} );"
-      end
     end
     
   end
