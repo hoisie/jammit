@@ -31,7 +31,7 @@ module Jammit
       end
       headjs = options.delete(:headjs) == true
       if headjs
-        html_safe(javascript_include_tag('head.load.min')) + headjs_include_tag(tags.flatten)
+        headjs_include_tag(tags.flatten)
       else
         html_safe(javascript_include_tag(tags.flatten))
       end
